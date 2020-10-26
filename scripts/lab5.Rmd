@@ -1,0 +1,112 @@
+---
+title: "Lab 5"
+author: "Anisha Babu"
+date: "October 21, 2020"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE) 
+```
+
+1. Create a RStudio Project on your machine.
+
+* Within the Project create a folder for *data* and *scripts*.
+* Download the following three datasets into the project *data* folder.
+  + *sesame13.sav*
+  + *star.csv*
+  + *ais.xlsx*
+
+2. Read in the following three datasets, using `{here}` and `{rio}`:
+  * *sesame13.sav*
+  * *star.csv*
+  * *ais.xlsx*
+  
+**Hint**: For the *ais.xlsx* dataset look at the `skip` argument within the `rio` help documentation.
+  
+```{r import}
+library(tidyverse)
+library(dplyr)
+library(here)
+library(rio)
+ais <- import(here("data", "ais.xlsx"), skip = 15)
+sesame13 <- import(here("data", "sesame13.sav"))
+star <- import(here("data", "star.csv"))
+
+```
+
+3. Using the `ais` data, compute the average red blood cell count and average bmi by sport. Output these data as SPSS and EXCEL files. 
+
+```{r q2}
+by_sport <- group_by(ais,sport)
+avg_rbc <- summarize(by_sport, avg_rcc = mean(by_sport$rcc))
+avg_bmi <- summarize(by_sport, avg_bmi = mean(by_sport$bmi))
+export(avg_rbc, here("data", "avg_rbc.sav"))
+export(avg_bmi, here("data", "avg_bmi.sav"))
+export(avg_rbc, here("data", "avg_rbc.xlsx"))
+export(avg_bmi, here("data", "avg_bmi.xlsx"))
+
+
+
+```
+
+4. Use the `sesame` dataset to answer the following question: Was the average female age higher in schools or at home? 
+
+```{r q3}
+female_school <- filter(sesame13, sex == 2, setting == 1) 
+avg_school <- mean(female_school$age)
+female_home <- filter(sesame13, sex == 2, setting == 0) 
+avg_home <- mean(female_home$age)
+#Average age was higher in schools
+
+
+```
+
+5. First, how many rows and columns are in the *star* dataset? Next, remove outliers using a really poor method, just for practice, by eliminating students whose math (*tmathss*) scores were more than three standard deviations **above or below** the corresponding mean. How many rows are in the dataset now?
+
+```{r q4}
+dim(star)
+#star has 5748 rows and 12 columns
+
+avg_math <- mean(star$tmathss)
+sd3_math <- 3 * (sd(star$tmathss))
+min_math <- avg_math -sd3_math
+max_math <- avg_math + sd3_math
+
+star <- star[!star$tmathss > max_math & !star$tmathss < min_math,]
+
+dim(star)
+#there are now 5743 rows 
+
+  
+```
+
+6. Use the `star` dataset to compute standardized math and reading scores; name these variables *tmathss* and *treadss*. This means, for each of these variables, subtract the mean from each observation and divide by the standard deviation: $x_s = \frac{x_i - \bar{X}}{sd(X)}$. 
+  + Check that your computations were correct by computing the mean and standard deviation of each variable (they should be 0 and 1). 
+  + Compute the mean of the standardized variable for all *sex*/*frl* combinations (I'm asking you to extend what you know here, we haven't talked explicitly about how to do this yet, but you have seen examples). 
+  + What do you make of these findings? Do you see an effect by *sex*? An *FRL* effect? Is there evidence of an interaction (i.e., that the effect of *FRL* is greater for boys versus girls)?
+
+```{r q5}
+avg_math <- mean(star$tmathss)
+sd_math <- sd(star$tmathss)
+avg_read <- mean(star$treadss)
+sd_read <- sd(star$treadss)
+star$tmathss <- (star$tmathss - avg_math) / sd_math
+star$treadss <- (star$treadss - avg_read) / sd_read
+
+avg_math2 <- mean(star$tmathss)
+sd_math2 <- sd(star$tmathss)
+avg_read2 <- mean(star$treadss)
+sd_read2 <- sd(star$treadss)
+
+star %>%
+  group_by(sex, frl) %>%
+  summarize(avg_math = mean(tmathss), avg_read = mean(treadss))
+
+#this summary does not appear to show an effect of sex 
+#frl is associated with negative scores
+#the magnitude of score is due to interaction (higher magnitude of boys with frl and girls without frl)
+
+```
+
+Please submit you .Rmd file, as well as the rendered .html file.
